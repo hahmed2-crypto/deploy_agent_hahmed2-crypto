@@ -1,13 +1,38 @@
 #!/bin/bash
 
+# ==============================================================================
+# PHASE 3: PROCESS MANAGEMENT (THE SIGNAL TRAP)
+# This must be declared at the top so it is active immediately.
+# ==============================================================================
+cleanup_on_interrupt() {
+    echo -e "\n\n[!] SIGINT (Ctrl+C) detected! Initiating emergency cleanup..."
+    
+    # If the project directory has been set and exists, archive it and delete it
+    if [ -n "$PROJECT_DIR" ] && [ -d "$PROJECT_DIR" ]; then
+        ARCHIVE_NAME="${PROJECT_DIR}_archive.tar.gz"
+        echo "[*] Bundling partial project state into: $ARCHIVE_NAME"
+        tar -czf "$ARCHIVE_NAME" "$PROJECT_DIR" 2>/dev/null
+        
+        echo "[*] Deleting incomplete directory to keep workspace clean: $PROJECT_DIR"
+        rm -rf "$PROJECT_DIR"
+    fi
+    
+    echo "[X] Cleanup complete. Exiting safely."
+    exit 1
+}
+
+# Register the trap for SIGINT (Ctrl+C)
+trap cleanup_on_interrupt SIGINT
+
+# ==============================================================================
+# PHASE 1: DIRECTORY ARCHITECTURE & AUTOMATION
+# ==============================================================================
 echo "========================================="
 echo "   Automated Project Bootstrapping Agent "
 echo "========================================="
 
-# 1. Prompt the user for the project suffix
 read -p "Enter project unique identifier/input: " USER_INPUT
 
-# Sanitize input: ensure it is not empty
 if [ -z "$USER_INPUT" ]; then
     echo "[Error] Project identifier cannot be empty!"
     exit 1
@@ -15,7 +40,7 @@ fi
 
 PROJECT_DIR="attendance_tracker_${USER_INPUT}"
 
-# 2. Robust error handling if directory already exists
+# Check if directory already exists
 if [ -d "$PROJECT_DIR" ]; then
     echo "[Error] The directory '$PROJECT_DIR' already exists."
     read -p "Would you like to overwrite it? (y/N): " OVERWRITE_CHOICE
@@ -28,27 +53,78 @@ if [ -d "$PROJECT_DIR" ]; then
     fi
 fi
 
+# Verify downloaded source files exist in the root folder before copying
+if [ ! -f "attendance_checker.py" ] || [ ! -f "assets.csv" ] || [ ! -f "config.json" ] || [ ! -f "reports.log" ]; then
+    echo "[Error] Missing required source files in the root execution directory!"
+    exit 1
+fi
+
 echo "[*] Generating workspace directory structure..."
-# Create the parent and nested directories seamlessly
 mkdir -p "$PROJECT_DIR/Helpers"
 mkdir -p "$PROJECT_DIR/reports"
 
-# 3. Simulate deploying code assets (creates template files)
-echo "[*] Deploying system code templates and assets..."
-touch "$PROJECT_DIR/attendance_checker.py"
+echo "[*] Deploying system code and assets..."
+cp "attendance_checker.py" "$PROJECT_DIR/"
+cp "assets.csv" "$PROJECT_DIR/Helpers/"
+cp "config.json" "$PROJECT_DIR/Helpers/"
+cp "reports.log" "$PROJECT_DIR/reports/"
 touch "$PROJECT_DIR/image.png"
-touch "$PROJECT_DIR/reports/reports.log"
 
-# Create a base config.json layout for step 3
-cat <<EOF > "$PROJECT_DIR/Helpers/config.json"
-{
-  "warning_threshold": 75,
-  "failure_threshold": 50
-}
-EOF
+# ==============================================================================
+# PHASE 2: DYNAMIC CONFIGURATION (STREAM EDITING)
+# ==============================================================================
+echo "-----------------------------------------"
+echo "         Configuration Settings          "
+echo "-----------------------------------------"
 
-# Create a base assets.csv
-echo "student_id,name,status" > "$PROJECT_DIR/Helpers/assets.csv"
+read -p "Enter Warning Threshold percentage (Default: 75): " WARNING_VAL
+if [ -z "$WARNING_VAL" ]; then
+    WARNING_VAL=75
+fi
 
-echo "[Success] Phase 1 Directory Structure Ready."
+if [[ ! "$WARNING_VAL" =~ ^[0-9]+$ ]]; then
+    echo "[Error] Warning threshold must be a number! Clean exiting."
+    rm -rf "$PROJECT_DIR"
+    exit 1
+fi
+
+read -p "Enter Failure Threshold percentage (Default: 50): " FAILURE_VAL
+if [ -z "$FAILURE_VAL" ]; then
+    FAILURE_VAL=50
+fi
+
+if [[ ! "$FAILURE_VAL" =~ ^[0-9]+$ ]]; then
+    echo "[Error] Failure threshold must be a number! Clean exiting."
+    rm -rf "$PROJECT_DIR"
+    exit 1
+fi
+
+# Edit config.json in place
+sed -i "s/\"warning_threshold\": [0-9]*/\"warning_threshold\": $WARNING_VAL/" "$PROJECT_DIR/Helpers/config.json"
+sed -i "s/\"failure_threshold\": [0-9]*/\"failure_threshold\": $FAILURE_VAL/" "$PROJECT_DIR/Helpers/config.json"
+
+echo "[*] Successfully updated config.json with custom parameters."
+
+# ==============================================================================
+# PHASE 4: ENVIRONMENT VALIDATION (HEALTH CHECK)
+# ==============================================================================
+echo "-----------------------------------------"
+echo "         System Health Check             "
+echo "-----------------------------------------"
+
+echo "[*] Validating local dependencies..."
+python3 --version > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    PYTHON_VER=$(python3 --version)
+    echo "[Success] Environment verified: $PYTHON_VER is installed."
+else
+    echo "[Warning] Dependency Missing: python3 could not be found on this system."
+fi
+
+echo "========================================="
+echo " Setup Finished Successfully for $PROJECT_DIR"
+echo "========================================="
+
+
 
