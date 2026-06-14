@@ -100,10 +100,11 @@ if [[ ! "$FAILURE_VAL" =~ ^[0-9]+$ ]]; then
 fi
 
 # Edit config.json in place
-sed -i "s/\"warning_threshold\": [0-9]*/\"warning_threshold\": $WARNING_VAL/" "$PROJECT_DIR/Helpers/config.json"
-sed -i "s/\"failure_threshold\": [0-9]*/\"failure_threshold\": $FAILURE_VAL/" "$PROJECT_DIR/Helpers/config.json"
+sed -i "s/\"warning\": [0-9]*/\"warning\": $WARNING_VAL/" "$PROJECT_DIR/Helpers/config.json"
+sed -i "s/\"failure\": [0-9]*/\"failure\": $FAILURE_VAL/" "$PROJECT_DIR/Helpers/config.json"
 
 echo "[*] Successfully updated config.json with custom parameters."
+
 
 # ==============================================================================
 # PHASE 4: ENVIRONMENT VALIDATION (HEALTH CHECK)
