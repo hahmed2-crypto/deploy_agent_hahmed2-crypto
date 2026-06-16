@@ -110,7 +110,7 @@ echo "[*] Successfully updated config.json with custom parameters."
 # PHASE 4: ENVIRONMENT VALIDATION (HEALTH CHECK)
 # ==============================================================================
 echo "-----------------------------------------"
-echo "         System Health Check             "
+echo "         System Validation Checker             "
 echo "-----------------------------------------"
 
 echo "[*] Validating local dependencies..."
